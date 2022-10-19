@@ -1,18 +1,44 @@
-  #include <WiFi.h>
+// Load Wi-Fi library
+#include <WiFi.h>
+#define sensorpin A0
+
+// Replace with your network credentials
+//const char* ssid = "AP02_VALLEY";
+//const char* password = "amontada";
 
 const char* ssid = "EEEP SEC";
 const char* password = "@eplgfm2021";
 
+//const char* ssid = "EEEP QUADRA";
+//const char* password = "@eplgfm22";
+
+//const char* ssid = "EEEP PATIO";
+//const char* password = "@eplgfm21";
+
+//const char* ssid = "Marcy";
+//const char* password = "@marcy24";
+
+// Set web server port number to 80
 WiFiServer server(80);
+
+// Variable to store the HTTP request
 String header;
+String valor;
 
-
+// Current time
 unsigned long currentTime = millis();
+// Previous time
 unsigned long previousTime = 0; 
+// Define timeout time in milliseconds (example: 2000ms = 2s)
 const long timeoutTime = 2000;
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
+  
+  pinMode(34, INPUT); //Setup for leads off detection LO +
+  pinMode(35, INPUT); //Setup for leads off detection LO -
+
+  // Connect to Wi-Fi network with SSID and password
   Serial.print("Connecting to ");
   Serial.println(ssid);
   WiFi.begin(ssid, password);
@@ -20,15 +46,27 @@ void setup() {
     delay(500);
     Serial.print(".");
   }
+  // Print local IP address and start web server
+  Serial.println("");
   Serial.println("WiFi connected.");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
   server.begin();
 }
 
-
-
 void loop(){
+  if((digitalRead(34) == 1)||(digitalRead(35) == 1)){ 
+  Serial.println('!');
+  valor = '!';
+  } 
+  else{ 
+  // send the value of analog input 0: 
+  Serial.println(analogRead(sensorpin)); 
+  valor = String(analogRead(sensorpin));
+  } 
+  //Wait for a bit to keep serial data from saturating 
+  delay(1);
+
   WiFiClient client = server.available();   // Listen for incoming clients
 
   if (client) {                             // If a new client connects,
@@ -51,14 +89,29 @@ void loop(){
             client.println("HTTP/1.1 200 OK");
             client.println("Content-type:text/html");
             client.println("Connection: close");
-            client.println();
+            client.println();    
+            
             
             // Display the HTML web page
             client.println("<!DOCTYPE html><html>");
             client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
             client.println("<link rel=\"icon\" href=\"data:,\">");
-            client.println("<body><h1>ESP32 Web Server</h1>");
+            client.println("<meta http-equiv=refresh content=0.8>");
+            // CSS to style the on/off buttons 
+            // Feel free to change the background-color and font-size attributes to fit your preferences
+            client.println("<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}");
+            client.println(".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;");
+            client.println("text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}");
+            client.println("</style></head>");
+            
+            // Web Page Heading
+            client.println("<body><h1>ESP32 Web Server ECG</h1>");
+            client.println("<p style=color: red>" + valor + "</p>");
             client.println("</body></html>");
+            
+            // The HTTP response ends with another blank line
+            client.println();
+            // Break out of the while loop
             break;
           } else { // if you got a newline, then clear currentLine
             currentLine = "";
